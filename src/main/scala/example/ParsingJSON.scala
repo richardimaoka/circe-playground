@@ -44,5 +44,24 @@ object ParsingJSON {
     //     6
     //   ]
     // })
+
+    val invalidJson: String =
+      """
+        |{
+        |  "foo": "bar",
+        |  "baz": 123,
+        |  'list of stuff': [ 4, 5, 6 ]
+        |}
+      """.stripMargin
+
+    println(parse(invalidJson))
+    //Left(io.circe.ParsingFailure: expected " got ' (line 5, column 36))
+
+    /**
+     * Known precision issue ... doesn't happen in Scala but only scala.js
+     */
+    println(decode[Long]("767946224062369796"))
+    //works fine,   Right(767946224062369796)
+
   }
 }
