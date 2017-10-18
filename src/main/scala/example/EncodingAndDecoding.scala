@@ -166,10 +166,93 @@ object EncodingAndDecoding {
     //    }
   }
 
+  def custonEncoderDecoder: Unit = {
+    import io.circe.{Encoder, Decoder}
+    import io.circe.Json
+    import io.circe.HCursor
+    import io.circe.syntax._
+    import io.circe.parser._
+
+    class Thing(val foo: String, val bar: Int)
+    // defined class Thing
+
+    implicit val customEncodeFoo: Encoder[Thing] = new Encoder[Thing] {
+      final def apply(a: Thing): Json = Json.obj(
+        ("foo", Json.fromString(a.foo)),
+        ("bar", Json.fromInt(a.bar))
+      )
+    }
+    // customEncodeFoo: io.circe.Encoder[Thing] = $anon$1@1866a8cd
+
+    implicit val customDecodeFoo: Decoder[Thing] = new Decoder[Thing] {
+      final def apply(c: HCursor): Decoder.Result[Thing] =
+        for {
+          foo <- c.downField("foo").as[String]
+          bar <- c.downField("bar").as[Int]
+        } yield {
+          new Thing(foo, bar)
+        }
+    }
+    // customDecodeFoo: io.circe.Decoder[Thing] = $anon$1@4b5e2e9e
+
+    println(new Thing("fooooo", 20).asJson)
+    println(parse(new Thing("fooooo", 20).asJson.toString))
+
+    import cats.syntax.either._
+    // import cats.syntax.either._
+
+    import java.time.Instant
+    // import java.time.Instant
+
+    /**
+     * Encoder.encodeString.contramap:
+     * final def contramap[B](f: B => A): Encoder[B]
+     *   Create a new [[Encoder]] by applying a function to a value of type `B` before encoding as an `A`.
+     */
+    implicit val encodeInstant: Encoder[Instant] = Encoder.encodeString.contramap[Instant](_.toString)
+    // encodeInstant: io.circe.Encoder[java.time.Instant] = io.circe.Encoder$$anon$11@5cc63bd0
+
+    /**
+     * Decoder.decodeString.emap:
+     * final def emap[B](f: A => Either[String, B]): Decoder[B]
+     *   Create a new decoder that performs some operation on the result if this one succeeds.
+     *
+     *   @param f a function returning either a value or an error message
+     */
+    implicit val decodeInstant: Decoder[Instant] = Decoder.decodeString.emap { str =>
+      Either.catchNonFatal(Instant.parse(str)).leftMap(t => "Instant")
+    }
+    // decodeInstant: io.circe.Decoder[java.time.Instant] = io.circe.Decoder$$anon$21@2ef6806d
+  }
+
+  /**
+   * Doesn't compile in circe 0.8.0
+   */
+//  def customKeyMappingsAndAnnotations(): Unit ={
+//    import io.circe._, io.circe.syntax._
+//    // import io.circe.generic.extras._
+//    // import io.circe.syntax._
+//
+//    implicit val config: Configuration = Configuration.default.withSnakeCaseKeys
+//    // config: io.circe.generic.extras.Configuration = Configuration(io.circe.generic.extras.Configuration$$$Lambda$2037/501381773@195cef0e,false,None)
+//
+//    @ConfiguredJsonCodec case class User(firstName: String, lastName: String)
+//    // defined class User
+//    // defined object User
+//
+//    User("Foo", "McBar").asJson
+//    // res8: io.circe.Json =
+//    // {
+//    //   "first_name" : "Foo",
+//    //   "last_name" : "McBar"
+//    // }
+//  }
+
   def main(args: Array[String]): Unit ={
     Wrap("basics")(basics)
     Wrap("semiAutomaticDerivation")(semiAutomaticDerivation)
     Wrap("forProductNHelperMethods")(forProductNHelperMethods)
     Wrap("fullyAutomaticDerivation")(fullyAutomaticDerivation)
+    Wrap("custonEncoderDecoder")(custonEncoderDecoder)
   }
 }
